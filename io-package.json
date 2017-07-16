@@ -1,0 +1,40 @@
+{
+    "common": {
+        "name":    "sienna",
+        "version": "0.0.1",
+	    "news": {
+			"0.5.0": {
+			  "en": "beta version",
+			  "de": "Betaversion",
+			  "ru": "Бета версия"
+			},
+			"0.0.1": {
+			  "en": "initial adapter",
+			  "de": "Initiale Version",
+			  "ru": "Первоначальный адаптер"
+			}
+		},
+        "title":                    "SiennaSystem",
+        "desc":                     {
+				 "en": "ioBroker SiennaSystem Adapter",
+				 "de": "ioBroker SiennaSystem Adapter",
+				 "ru": "ioBroker SiennaSystem драйвер как образец"
+		},
+        "platform":                 "Javascript/Node.js",
+        "mode":                     "daemon",
+        "icon":                     "sienna.png",
+        "enabled":                  true,
+		"extIcon":                  "https://raw.githubusercontent.com/treborbay/ioBroker.sienna/master/admin/sienna.png",
+		"keywords":                 ["sienna"],
+        "readme":                   "https://github.com/treborbay/ioBroker.sienna/blob/master/README.md",
+		"loglevel":                 "info",
+        "type":                     "hardware"
+    },
+    "native": {
+        "test1": true,
+        "test2": 42
+    },
+    "objects": [
+
+    ]
+}
