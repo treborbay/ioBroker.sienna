@@ -25,7 +25,8 @@
 
 //you have to require the utils module and call adapter function
 var utils = require(__dirname + '/lib/utils'); // Get common adapter utils
-var SerialPort = require("serialport").SerialPort;
+const SerialPort = require("serialport");
+const ByteLength = SerialPort.parsers.ByteLength
 
 //you have to call the adapter function and pass a options object
 //name has to be set and has to be equal to adapters folder name and main file
@@ -57,7 +58,7 @@ var COMM_ERROR_BUS = 0x38; // COMM_ERROR_BUS Communication partner lost, bus com
 var MSG_complete = 0x39; // MSG_complete Message has been sent successfully over the PL/FT bus (ack received for messages)
 var SET_LOCATION = 0x3A; // SET_LOCATION Set the location string0x3D REPORT_RF_STATE Reports the assigned RF channels of a RF gateway. (forFW version >=10)0x3F REPORT_PL_STATE Reports the assigned PL channels of a RF gateway. (forFW version >=10)0x41 2 3 4 5 6 7 8 NETWORK_VARIABLE Indicates that this message contains aSIENNA network variable update via neuron addressing. The lower 4 bitindicate the group address g of the addressed module.0x40 1 2 3 4 5 6 7 8 9 A B C D E Foreign frames for transparent messagetunnelling Used by tunneling interfacese.g. FLTP14 (PL) or PLTF14 (FT). Length of the transparent payload depends onthe msg. code 0x4X: Payload length = 1 + XThis allows for payload length up to 15 bytes (0x4E).
 var SERVICE_Pin_Message = 0x7F; // SERVICE_Pin_Message Received a service PIN message
-explizit messages
+//explizit messages
 var OFF = 0x01|0x80; // OFF Switch Off
 var ON = 0x02|0x80; // ON Switch On
 var SWITCH = 0x03|0x80; // SWITCH Toggle
@@ -123,9 +124,9 @@ adapter.on('unload', function (callback) {
 			// close connection
 			port.close(function (error)
 					{
-				if(error){console.log('OnStop closed ERROR')}
+				if(error){adapter.log.info('OnStop closed ERROR')}
 					});
-			console.log("SerialPort closed!");
+			adapter.log.info("SerialPort closed!");
 		}
 		adapter.log.info('cleaned everything up...');
 		callback();
@@ -164,7 +165,7 @@ adapter.on('stateChange', function (id, state) {
 		}
 		else if(/^group\.\d+\.\d+\.switch$/.test(id))
 		{
-			console.log("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + obj.state.val);
+			adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + obj.state.val);
 			if(obj.state.val === true)
 			{
 				sendMsg(ON , [obj.native.group, obj.native.element], 0x00 );
@@ -176,7 +177,7 @@ adapter.on('stateChange', function (id, state) {
 		}
 		else if(/^group\.\d+\.\d+\.dimmer$/.test(id))
 		{
-			console.log("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + obj.state.val);
+			adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + obj.state.val);
 			sendMsg(SET_DIM_VALUE , [obj.native.group, obj.native.element], obj.state.val * 2 );
 		}
 	}
@@ -187,7 +188,7 @@ adapter.on('message', function (obj) {
 	if (typeof obj == 'object' && obj.message) {
 		if (obj.command == 'send') {
 			// e.g. send email or pushover or whatever
-			console.log('send command');
+			adapter.log.info('send command');
 
 			// Send response in callback if required
 			if (obj.callback) adapter.sendTo(obj.from, obj.command, 'Message received', obj.callback);
@@ -246,11 +247,11 @@ function main() {
 
 	// examples for the checkPassword/checkGroup functions
 	adapter.checkPassword('admin', 'iobroker', function (res) {
-		console.log('check user admin pw ioboker: ' + res);
+		adapter.log.info('check user admin pw ioboker: ' + res);
 	});
 
 	adapter.checkGroup('admin', 'admin', function (res) {
-		console.log('check group user admin group admin: ' + res);
+		adapter.log.info('check group user admin group admin: ' + res);
 	});
 
 
@@ -258,41 +259,43 @@ function main() {
 			{
 		if(err)
 		{
-			console.log("Error Open Port");
+			adapter.log.info("Error Open Port");
 			stopScript();
 		}
 		portsList.forEach(function(portInfo)
-				{
-			if(portInfo.vendorId === '0x0403' && portInfo.productId === '0x6001')
+		{
+			if((portInfo.vendorId === '0403' && portInfo.productId === 'SIENNA Serial Interface') || (portInfo.vendorId === '0x0403' && portInfo.productId === '0x6001'))
 			{
-				console.log(portInfo.comName);
-				console.log(portInfo.pnpId);
-				console.log(portInfo.manufacturer);
-				console.log(portInfo.serialNumber);
-				// console.log(portInfo.locationId);
-				console.log(portInfo.vendorId);
-				console.log(portInfo.productId);
-				port = new SerialPort(portInfo.comName, { baudRate: 9600, parser: SerialPort.parsers.byteLength(13),
+				adapter.log.info(portInfo.comName);
+				adapter.log.info(portInfo.pnpId);
+				adapter.log.info(portInfo.manufacturer);
+				adapter.log.info(portInfo.serialNumber);
+				// adapter.log.info(portInfo.locationId);
+				adapter.log.info(portInfo.vendorId);
+				adapter.log.info(portInfo.productId);
+				port = new SerialPort(portInfo.comName, { baudRate: 9600, // parser: SerialPort.parsers.byteLength(13),
 					dataBits: 8, stopBits: 1, parity: 'none',
-					rtscts: true, xon: true, xoff:true, lock: true }, function (error)
+					rtscts: true, xon: true, xoff:true, lock: true },
+					function (error)
 					{
 						if(error)
 						{
-							console.log("Error Open Port");
+							adapter.log.info("Error Open Port");
 							stopScript();
 						}
-						console.log("SerialPort open!");
+						const parser = port.pipe(new ByteLength({length: 13}));
+						adapter.log.info("SerialPort open!");
 
 						// initial all states with the actual actuator state
 						if(g_SystemState === 'STANDBY')
 						{
 							g_SystemState = 'SYNCSTATE';
-							console.log(g_SystemState);
+							adapter.log.info(g_SystemState);
 							g_syncList = [];
 							g_syncListIndex=0;
 							//ToDo
 //							 $('*.Sienna.group*').each(function (id, i) {
-//    							 console.log(id);
+//    							 adapter.log.info(id);
 //    							 g_syncList.push({'group':getObject(id).native.group, 'element':getObject(id).native.element});
 //							 });
 							if(g_syncList.length > 0)
@@ -306,7 +309,7 @@ function main() {
 						}
 						else
 						{
-							console.log(g_SystemState + ' allready running!');
+							adapter.log.info(g_SystemState + ' allready running!');
 						}
 
 						// serial port events
@@ -315,21 +318,21 @@ function main() {
 							// port.set({brk:false, cts:true, dsr:true,
 							// dtr:true, rts:true});
 							port.flush(function(error){});
-							console.log('Open');
+							adapter.log.info('Open');
 								});
 
 						port.on('error', function(err)
 								{
-							console.log('Error: ', err.name);
+							adapter.log.info('Error: ', err.name);
 							port.close(function (error) {
 								if(error)
 								{
-									console.log('Closed ERROR');
+									adapter.log.info('Closed ERROR');
 								}
 							});
 								});
 
-						port.on('data', analyzeSerialData);
+						parser.on('data', analyzeSerialData);
 					});
 			}
 				});
@@ -429,7 +432,25 @@ function analyzeSerialData(data)
 	else
 	{
 		adapter.log.info('Data Error: ' + data.toString('hex'));
-		port.flush();
+	    while(serialPort.read() != null)
+        {
+            adapter.log.info("SerialPort empty buffer!");
+        }
+        g_SystemState = 'STANDBY'
+        g_SystemState = 'SYNCSTATE';
+        adapter.log.info(g_SystemState);
+        g_syncList = [];
+        g_syncListIndex=0;
+        $('*.Sienna.group*').each(function (id, i)
+        {
+            adapter.log.info(id);
+            g_syncList.push({'group':getObject(id).native.group, 'element':getObject(id).native.element});
+        });
+        if(g_syncList.length > 0)
+        {
+            sendMsg(REQUEST_STATE , [g_syncList[0].group, g_syncList[0].element], 0x0 );
+        }
+		// port.flush();
 		// port.flush(function(error){ adapter.log.info('Data Error: ' +
 		// port.read().toString('hex'));});
 	}
@@ -611,19 +632,26 @@ function createStateForDevice( siennaDevice )
 		});
 
 		// Set Switch-Typ to native switchTyp value, if defined
+		// caution setObject asyncron => so obj.native could be not valid. Only always valid in the second run
+		adapter.log.info("group."+siennaDevice.group+"."+siennaDevice.element + ".switch")
 		adapter.getObject("group."+siennaDevice.group+"."+siennaDevice.element + ".switch",
 				function (err, obj)
 				{
-			if (err) adapter.log.error('Cannot get object: ' + err)
-			else if(obj.native.hasOwnProperty("switchTyp"))
-			{
-				adapter.log.info('SET_SW_POS to ' + obj.native.switchTyp)
-				sendMsg(SET_SW_POS , siennaDevice.address, [obj.native.switchTyp, 0x00, 0x00] ); // set
-			}
-			else
-			{
-				adapter.log.info("switchTyp not defined. Leave actual setting.")
-			}
+		            if(obj)
+	                {
+    		            //adapter.log.info(err)
+    		            //adapter.log.info(JSON.stringify(obj.native))
+            			if (err) adapter.log.error('Cannot get object: ' + err)
+            			else if(obj.native.hasOwnProperty("switchTyp"))
+            			{
+            				adapter.log.info('SET_SW_POS to ' + obj.native.switchTyp)
+            				sendMsg(SET_SW_POS , siennaDevice.address, [obj.native.switchTyp, 0x00, 0x00] ); // set
+            			}
+            			else
+            			{
+            				adapter.log.info("switchTyp not defined. Leave actual setting.")
+            			}
+	                }
 				}
 		)
 	}

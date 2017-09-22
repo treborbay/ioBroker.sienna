@@ -27,7 +27,7 @@
 		"extIcon":                  "https://raw.githubusercontent.com/treborbay/ioBroker.sienna/master/admin/sienna.png",
 		"keywords":                 ["sienna"],
         "readme":                   "https://github.com/treborbay/ioBroker.sienna/blob/master/README.md",
-		"loglevel":                 "info",
+		"loglevel":                 "debug",
         "type":                     "hardware"
     },
     "native": {
