@@ -148,6 +148,7 @@ adapter.on('stateChange', function (id, state) {
 
 	// you can use the ack flag to detect if it is status (true) or command (false)
 	if (state && !state.ack) {
+	    obj = adapter.getObject()
 		adapter.log.info('ack is not set!');
 		adapter.log.info(g_SystemState);
 		if(id === "learnNewDevices"){
@@ -165,6 +166,7 @@ adapter.on('stateChange', function (id, state) {
 		}
 		else if(/^group\.\d+\.\d+\.switch$/.test(id))
 		{
+		    //adapter.get
 			adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + obj.state.val);
 			if(obj.state.val === true)
 			{
@@ -293,19 +295,24 @@ function main() {
 							adapter.log.info(g_SystemState);
 							g_syncList = [];
 							g_syncListIndex=0;
-							//ToDo
-//							 $('*.Sienna.group*').each(function (id, i) {
-//    							 adapter.log.info(id);
-//    							 g_syncList.push({'group':getObject(id).native.group, 'element':getObject(id).native.element});
-//							 });
-							if(g_syncList.length > 0)
-							{
-								sendMsg(REQUEST_STATE , [g_syncList[0].group, g_syncList[0].element], 0x0 );
-							}
-							else
-							{
-								g_SystemState = 'STANDBY';
-							}
+						    adapter.getStates('group.*',
+    				            function (err, states)
+    						    {
+    						        for(var id in states)
+    					            {
+    						            g_syncList.push(id);
+    					            }
+    	                            try
+                                    {
+    						            sendRequest(g_syncList[0]);
+    						        }
+    						        catch (e)
+    						        {
+    						            adapter.log.info('No States');
+    						            adapter.log.info(g_SystemState + ' finished');
+    						            g_SystemState = 'STANDBY';
+    					            }
+    						    });
 						}
 						else
 						{
@@ -313,25 +320,28 @@ function main() {
 						}
 
 						// serial port events
-						port.on('open', function() 
+						port.on('open',
+					        function() 
 								{
-							// port.set({brk:false, cts:true, dsr:true,
-							// dtr:true, rts:true});
-							port.flush(function(error){});
-							adapter.log.info('Open');
+        							// port.set({brk:false, cts:true, dsr:true,
+        							// dtr:true, rts:true});
+        							port.flush(function(error){});
+        							adapter.log.info('Open');
 								});
 
-						port.on('error', function(err)
-								{
-							adapter.log.info('Error: ', err.name);
-							port.close(function (error) {
-								if(error)
-								{
-									adapter.log.info('Closed ERROR');
-								}
+						port.on('error',
+					        function(err)
+							{
+    							adapter.log.info('Error: ', err.name);
+    							port.close(
+    						        function (error)
+    						        {
+        								if(error)
+        								{
+        									adapter.log.info('Closed ERROR');
+        								}
+        							});
 							});
-								});
-
 						parser.on('data', analyzeSerialData);
 					});
 			}
@@ -341,6 +351,17 @@ function main() {
 
 //******************************************************************************
 //functions
+function sendRequest(id)
+{
+   adapter.getObject(id,
+       function(err,obj)
+       {
+            adapter.log.debug(JSON.stringify(obj));
+            g_syncListIndex++;
+            sendMsg(REQUEST_STATE , [obj.native.group, obj.native.element], 0x0 );
+       });
+}
+
 function analyzeSerialData(data)
 {
 	if(data[0] === 0x2a && data[12]===0x00)
@@ -348,30 +369,30 @@ function analyzeSerialData(data)
 		adapter.log.info('Data: ' + data.toString('hex'));
 		if(data[1]==STATUS_ON)
 		{
-			// setState (id, state, ack, callback);
-			setState("group."+data[2]+"."+data[3]+".switch", true, true);
+			// adapter.setState (id, state, ack, callback);
+			adapter.setState("group."+data[2]+"."+data[3]+".switch", true, true);
 		}
 		else if(data[1]==STATUS_OFF)
 		{
-			// setState (id, state, ack, callback);
-			setState("group."+data[2]+"."+data[3]+".switch", false, true);
+			// adapter.setState (id, state, ack, callback);
+			adapter.setState("group."+data[2]+"."+data[3]+".switch", false, true);
 		}
 		else if(data[1]==SWITCH)
 		{
 			// do nothing ;-)
-			// setState (id, state, ack, callback);
+			// adapter.setState (id, state, ack, callback);
 		}
 		else if(data[1]==REPORT_DIM_VALUE)
 		{
-			// setState (id, state, ack, callback);
-			setState("group."+data[2]+"."+data[3]+".dimmer", data[4]/2, true);
+			// adapter.setState (id, state, ack, callback);
+			adapter.setState("group."+data[2]+"."+data[3]+".dimmer", data[4]/2, true);
 			if(data[4] > 0)
 			{
-				setState("group."+data[2]+"."+data[3]+".switch", true, true);
+				adapter.setState("group."+data[2]+"."+data[3]+".switch", true, true);
 			}
 			else
 			{
-				setState("group."+data[2]+"."+data[3]+".switch", false, true);
+				adapter.setState("group."+data[2]+"."+data[3]+".switch", false, true);
 			}
 		}
 		else if(data[1]==DEVICE_FOUND)
@@ -414,13 +435,12 @@ function analyzeSerialData(data)
 		{
 			adapter.log.info('Data unknown: ' + data.toString('hex'));
 		}
-
 		if(g_SystemState === 'SYNCSTATE')
 		{   
-			g_syncListIndex++;
+		    //adapter.log.info(g_syncListIndex + '<' + g_syncList.length);
 			if(g_syncListIndex < g_syncList.length )
 			{
-				sendMsg(REQUEST_STATE , [g_syncList[g_syncListIndex].group, g_syncList[g_syncListIndex].element], 0x0 );
+				sendRequest(g_syncList[g_syncListIndex]);
 			}
 			else
 			{
@@ -438,18 +458,19 @@ function analyzeSerialData(data)
         }
         g_SystemState = 'STANDBY'
         g_SystemState = 'SYNCSTATE';
+        //ToDo
         adapter.log.info(g_SystemState);
-        g_syncList = [];
-        g_syncListIndex=0;
-        $('*.Sienna.group*').each(function (id, i)
-        {
-            adapter.log.info(id);
-            g_syncList.push({'group':getObject(id).native.group, 'element':getObject(id).native.element});
-        });
-        if(g_syncList.length > 0)
-        {
-            sendMsg(REQUEST_STATE , [g_syncList[0].group, g_syncList[0].element], 0x0 );
-        }
+//        g_syncList = [];
+//        g_syncListIndex=0;
+//        $('*.Sienna.group*').each(function (id, i)
+//        {
+//            adapter.log.info(id);
+//            g_syncList.push({'group':getObject(id).native.group, 'element':getObject(id).native.element});
+//        });
+//        if(g_syncList.length > 0)
+//        {
+//            sendMsg(REQUEST_STATE , [g_syncList[0].group, g_syncList[0].element], 0x0 );
+//        }
 		// port.flush();
 		// port.flush(function(error){ adapter.log.info('Data Error: ' +
 		// port.read().toString('hex'));});
@@ -632,7 +653,7 @@ function createStateForDevice( siennaDevice )
 		});
 
 		// Set Switch-Typ to native switchTyp value, if defined
-		// caution setObject asyncron => so obj.native could be not valid. Only always valid in the second run
+		// caution setObject asyncron => so obj.native could be not valid. Only valid in the second run
 		adapter.log.info("group."+siennaDevice.group+"."+siennaDevice.element + ".switch")
 		adapter.getObject("group."+siennaDevice.group+"."+siennaDevice.element + ".switch",
 				function (err, obj)
