@@ -147,8 +147,8 @@ adapter.on('stateChange', function (id, state) {
 	adapter.log.info('stateChange ' + id + ' ' + JSON.stringify(state));
 
 	// you can use the ack flag to detect if it is status (true) or command (false)
-	if (state && !state.ack) {
-	    obj = adapter.getObject()
+	if (state && !state.ack)
+	{
 		adapter.log.info('ack is not set!');
 		adapter.log.info(g_SystemState);
 		if(id === "learnNewDevices"){
@@ -167,20 +167,31 @@ adapter.on('stateChange', function (id, state) {
 		else if(/^group\.\d+\.\d+\.switch$/.test(id))
 		{
 		    //adapter.get
-			adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + obj.state.val);
-			if(obj.state.val === true)
-			{
-				sendMsg(ON , [obj.native.group, obj.native.element], 0x00 );
-			}
-			else
-			{
-				sendMsg(OFF , [obj.native.group, obj.native.element], 0x00 );
-			}
+		    adapter.getObject(id,
+	            function(err,obj)
+	            {
+		            adapter.log.info(JSON.stringify(obj));
+    	            adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + state.val);
+    	            if(state.val === true)
+    	            {
+    	                sendMsg(ON , [obj.native.group, obj.native.element], 0x00 );
+    	            }
+    	            else
+    	            {
+    	                sendMsg(OFF , [obj.native.group, obj.native.element], 0x00 );
+    	            }
+	            }
+		    );
 		}
 		else if(/^group\.\d+\.\d+\.dimmer$/.test(id))
 		{
-			adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + obj.state.val);
-			sendMsg(SET_DIM_VALUE , [obj.native.group, obj.native.element], obj.state.val * 2 );
+          adapter.getObject(id,
+                  function(err,obj)
+                  {
+                      adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + state.val);
+                      sendMsg(SET_DIM_VALUE , [obj.native.group, obj.native.element], obj.state.val * 2 );
+                  }
+          );
 		}
 	}
 });
@@ -444,7 +455,7 @@ function analyzeSerialData(data)
 			}
 			else
 			{
-				adapter.log.info(g_SystemState + ' finished');
+				//ToDo: asynchron only after receive message valid adapter.log.info(g_SystemState + ' finished');
 				g_SystemState = 'STANDBY';
 			}
 		}
