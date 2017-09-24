@@ -189,7 +189,7 @@ adapter.on('stateChange', function (id, state) {
                   function(err,obj)
                   {
                       adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + state.val);
-                      sendMsg(SET_DIM_VALUE , [obj.native.group, obj.native.element], obj.state.val * 2 );
+                      sendMsg(SET_DIM_VALUE , [obj.native.group, obj.native.element], state.val * 2 );
                   }
           );
 		}
