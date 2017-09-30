@@ -1,7 +1,7 @@
 {
     "common": {
         "name":    "sienna",
-        "version": "0.0.1",
+        "version": "0.1.0",
 	    "news": {
 			"0.5.0": {
 			  "en": "beta version",
@@ -27,7 +27,7 @@
 		"extIcon":                  "https://raw.githubusercontent.com/treborbay/ioBroker.sienna/master/admin/sienna.png",
 		"keywords":                 ["sienna"],
         "readme":                   "https://github.com/treborbay/ioBroker.sienna/blob/master/README.md",
-		"loglevel":                 "debug",
+		"loglevel":                 "info",
         "type":                     "hardware"
     },
     "native": {

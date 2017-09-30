@@ -1,6 +1,6 @@
 {
   "name": "iobroker.sienna",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "ioBroker sienna Adapter",
   "author": {
     "name": "treborbay",

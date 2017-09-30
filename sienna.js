@@ -300,35 +300,7 @@ function main() {
 						adapter.log.info("SerialPort open!");
 
 						// initial all states with the actual actuator state
-						if(g_SystemState === 'STANDBY')
-						{
-							g_SystemState = 'SYNCSTATE';
-							adapter.log.info(g_SystemState);
-							g_syncList = [];
-							g_syncListIndex=0;
-						    adapter.getStates('group.*',
-    				            function (err, states)
-    						    {
-    						        for(var id in states)
-    					            {
-    						            g_syncList.push(id);
-    					            }
-    	                            try
-                                    {
-    						            sendRequest(g_syncList[0]);
-    						        }
-    						        catch (e)
-    						        {
-    						            adapter.log.info('No States');
-    						            adapter.log.info(g_SystemState + ' finished');
-    						            g_SystemState = 'STANDBY';
-    					            }
-    						    });
-						}
-						else
-						{
-							adapter.log.info(g_SystemState + ' allready running!');
-						}
+						startSyncstate();
 
 						// serial port events
 						port.on('open',
@@ -362,14 +334,53 @@ function main() {
 
 //******************************************************************************
 //functions
+
+function startSyncstate()
+{
+    if(g_SystemState === 'STANDBY')
+    {
+        g_SystemState = 'SYNCSTATE';
+        adapter.log.info(g_SystemState);
+        g_syncList = [];
+        g_syncListIndex=0;
+        adapter.getStates('group.*',
+            function (err, states)
+            {
+                for(var id in states)
+                {
+                    g_syncList.push(id);
+                }
+                try
+                {
+                    sendRequest(g_syncList[0]);
+                }
+                catch (e)
+                {
+                    adapter.log.info('No States');
+                    adapter.log.info(g_SystemState + ' finished');
+                    g_SystemState = 'STANDBY';
+                }
+            });
+    }
+    else
+    {
+        adapter.log.info(g_SystemState + ' allready running!');
+    }
+}
+
+
 function sendRequest(id)
 {
    adapter.getObject(id,
        function(err,obj)
        {
-            adapter.log.debug(JSON.stringify(obj));
-            g_syncListIndex++;
-            sendMsg(REQUEST_STATE , [obj.native.group, obj.native.element], 0x0 );
+           if(err)
+           {
+               adapter.log.info("ERROR <sendRequest>: invalid id");
+           }
+           adapter.log.debug(JSON.stringify(obj));
+           g_syncListIndex++;
+           sendMsg(REQUEST_STATE , [obj.native.group, obj.native.element], 0x0 );
        });
 }
 
@@ -457,6 +468,8 @@ function analyzeSerialData(data)
 			{
 				//ToDo: asynchron only after receive message valid adapter.log.info(g_SystemState + ' finished');
 				g_SystemState = 'STANDBY';
+				adapter.log.info('SYNCSTATE finished');
+				adapter.log.info(g_SystemState);
 			}
 		}
 	}
@@ -467,21 +480,8 @@ function analyzeSerialData(data)
         {
             adapter.log.info("SerialPort empty buffer!");
         }
-        g_SystemState = 'STANDBY'
-        g_SystemState = 'SYNCSTATE';
-        //ToDo
-        adapter.log.info(g_SystemState);
-//        g_syncList = [];
-//        g_syncListIndex=0;
-//        $('*.Sienna.group*').each(function (id, i)
-//        {
-//            adapter.log.info(id);
-//            g_syncList.push({'group':getObject(id).native.group, 'element':getObject(id).native.element});
-//        });
-//        if(g_syncList.length > 0)
-//        {
-//            sendMsg(REQUEST_STATE , [g_syncList[0].group, g_syncList[0].element], 0x0 );
-//        }
+        g_SystemState = 'STANDBY';
+        startSyncstate();
 		// port.flush();
 		// port.flush(function(error){ adapter.log.info('Data Error: ' +
 		// port.read().toString('hex'));});
@@ -532,8 +532,11 @@ function sendMsg( command, address, payload )
 		}
 	}
 	msg[11] = crc;
-	writeAndDrain(msg);
-	// adapter.log.info( msg.toString('hex'));
+	writeAndDrain(msg, 
+    function()
+    {
+       adapter.log.info( 'Send msg: ' + msg.toString('hex'));
+    });
 }
 
 function createStateForDevice( siennaDevice )
