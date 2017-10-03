@@ -26,7 +26,7 @@
 //you have to require the utils module and call adapter function
 var utils = require(__dirname + '/lib/utils'); // Get common adapter utils
 const SerialPort = require("serialport");
-const ByteLength = SerialPort.parsers.ByteLength
+const ByteLength = SerialPort.parsers.ByteLength;
 
 //you have to call the adapter function and pass a options object
 //name has to be set and has to be equal to adapters folder name and main file
@@ -115,6 +115,7 @@ var g_SystemState = 'STANDBY'; // ['STANDBY', 'LEARNING', 'SYNCSTATES'];
 var neuronIdStringList=[];
 var neuronIdStringListIndex = 0;
 var port = 0;
+var responseTimeoutID = 0;
 
 //is called when adapter shuts down - callback has to be called under any circumstances!
 adapter.on('unload', function (callback) {
@@ -144,18 +145,18 @@ adapter.on('objectChange', function (id, obj) {
 //is called if a subscribed state changes
 adapter.on('stateChange', function (id, state) {
 	// Warning, state can be null if it was deleted
-	adapter.log.info('stateChange ' + id + ' ' + JSON.stringify(state));
+	adapter.log.debug('stateChange ' + id + ' ' + JSON.stringify(state));
 
 	// you can use the ack flag to detect if it is status (true) or command (false)
 	if (state && !state.ack)
 	{
-		adapter.log.info('ack is not set!');
-		adapter.log.info(g_SystemState);
+		adapter.log.debug('ack is not set!');
+		adapter.log.debug(g_SystemState);
 		if(id === "learnNewDevices"){
 			if(g_SystemState === 'STANDBY')
 			{
 				g_SystemState = 'LEARNING';
-				adapter.log.info(g_SystemState);
+				adapter.log.debug(g_SystemState);
 				devicesDict = {};
 				sendMsg(FIND_DEVICES , [0x0, 0x0], 0x0 );
 			}
@@ -170,8 +171,8 @@ adapter.on('stateChange', function (id, state) {
 		    adapter.getObject(id,
 	            function(err,obj)
 	            {
-		            adapter.log.info(JSON.stringify(obj));
-    	            adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + state.val);
+		            //adapter.log.info(JSON.stringify(obj));
+    	            adapter.log.info("Group: " + obj.native.group + "; Element: "+ obj.native.element + "; Switch: " + state.val);
     	            if(state.val === true)
     	            {
     	                sendMsg(ON , [obj.native.group, obj.native.element], 0x00 );
@@ -188,7 +189,7 @@ adapter.on('stateChange', function (id, state) {
           adapter.getObject(id,
                   function(err,obj)
                   {
-                      adapter.log.info("Group: " + obj.native.group + " Element: "+ obj.native.element + " Switch: " + state.val);
+                      adapter.log.info("Group: " + obj.native.group + "; Element: "+ obj.native.element + "; Dimmer: " + state.val);
                       sendMsg(SET_DIM_VALUE , [obj.native.group, obj.native.element], state.val * 2 );
                   }
           );
@@ -214,6 +215,9 @@ adapter.on('ready', function () {
 	main();
 });
 
+
+//******************************************************************************
+//functions
 function main() {
 
 	// The adapters config (in the instance object everything under the attribute "native") is accessible via adapter.config:
@@ -330,10 +334,7 @@ function main() {
 			}
 				});
 			});
-}
-
-//******************************************************************************
-//functions
+};
 
 function startSyncstate()
 {
@@ -366,8 +367,7 @@ function startSyncstate()
     {
         adapter.log.info(g_SystemState + ' allready running!');
     }
-}
-
+};
 
 function sendRequest(id)
 {
@@ -379,16 +379,29 @@ function sendRequest(id)
                adapter.log.info("ERROR <sendRequest>: invalid id");
            }
            adapter.log.debug(JSON.stringify(obj));
-           g_syncListIndex++;
+           //g_syncListIndex++;
            sendMsg(REQUEST_STATE , [obj.native.group, obj.native.element], 0x0 );
        });
-}
+};
+
+function responseTimeout(data)
+{
+    writeAndDrain (data, 
+    function()
+    {
+       adapter.log.info( 'Repeat send msg: ' + msg.toString('hex'));
+    });
+};
 
 function analyzeSerialData(data)
 {
 	if(data[0] === 0x2a && data[12]===0x00)
 	{
-		adapter.log.info('Data: ' + data.toString('hex'));
+	    if(responseTimeoutID != 0)
+        {
+	        clearTimeout(responseTimeoutID);	        
+        }
+	    adapter.log.info('Recv Data: ' + data.toString('hex'));
 		if(data[1]==STATUS_ON)
 		{
 			// adapter.setState (id, state, ack, callback);
@@ -401,9 +414,14 @@ function analyzeSerialData(data)
 		}
 		else if(data[1]==SWITCH)
 		{
+		    adapter.log.debug("SWITCH Toggle")
 			// do nothing ;-)
-			// adapter.setState (id, state, ack, callback);
 		}
+        else if(data[1]==STOP_GO)
+        {
+            adapter.log.debug("STOP_GO Push button released")
+            // do nothing ;-)
+        }
 		else if(data[1]==REPORT_DIM_VALUE)
 		{
 			// adapter.setState (id, state, ack, callback);
@@ -460,6 +478,7 @@ function analyzeSerialData(data)
 		if(g_SystemState === 'SYNCSTATE')
 		{   
 		    //adapter.log.info(g_syncListIndex + '<' + g_syncList.length);
+		    g_syncListIndex++;
 			if(g_syncListIndex < g_syncList.length )
 			{
 				sendRequest(g_syncList[g_syncListIndex]);
@@ -476,7 +495,7 @@ function analyzeSerialData(data)
 	else
 	{
 		adapter.log.info('Data Error: ' + data.toString('hex'));
-	    while(serialPort.read() != null)
+	    while(port.read() != null)
         {
             adapter.log.info("SerialPort empty buffer!");
         }
@@ -486,14 +505,14 @@ function analyzeSerialData(data)
 		// port.flush(function(error){ adapter.log.info('Data Error: ' +
 		// port.read().toString('hex'));});
 	}
-}
+};
 
 function writeAndDrain (data, callback)
 {
-	port.write(data, function () {
-		port.drain(callback);
-	});
-}
+	port.write(data);
+	port.drain(callback);
+    responseTimeoutID = setTimeout(responseTimeout, 2000, data);
+};
 
 function sendMsg( command, address, payload )
 {
@@ -537,7 +556,7 @@ function sendMsg( command, address, payload )
     {
        adapter.log.info( 'Send msg: ' + msg.toString('hex'));
     });
-}
+};
 
 function createStateForDevice( siennaDevice )
 {
@@ -690,5 +709,5 @@ function createStateForDevice( siennaDevice )
 				}
 		)
 	}
-}
+};
 
