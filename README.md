@@ -8,6 +8,9 @@ This adapter is for controlling sienna system aktuators with the RS232 Interface
 
 ## Changelog
 
+#### 0.1.0
+* (treborbay) beta release
+
 #### 0.0.1
 * (treborbay) initial release
 
