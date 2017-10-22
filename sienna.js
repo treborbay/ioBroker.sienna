@@ -27,6 +27,7 @@
 var utils = require(__dirname + '/lib/utils'); // Get common adapter utils
 const SerialPort = require("serialport");
 const ByteLength = SerialPort.parsers.ByteLength;
+//const Ready = SerialPort.parsers.Ready;
 
 //you have to call the adapter function and pass a options object
 //name has to be set and has to be equal to adapters folder name and main file
@@ -262,14 +263,14 @@ function main() {
 	adapter.subscribeStates('*');
 
 
-	// examples for the checkPassword/checkGroup functions
-	adapter.checkPassword('admin', 'iobroker', function (res) {
-		adapter.log.info('check user admin pw ioboker: ' + res);
-	});
-
-	adapter.checkGroup('admin', 'admin', function (res) {
-		adapter.log.info('check group user admin group admin: ' + res);
-	});
+//	// examples for the checkPassword/checkGroup functions
+//	adapter.checkPassword('admin', 'iobroker', function (res) {
+//		adapter.log.info('check user admin pw ioboker: ' + res);
+//	});
+//
+//	adapter.checkGroup('admin', 'admin', function (res) {
+//		adapter.log.info('check group user admin group admin: ' + res);
+//	});
 
 
 	SerialPort.list(function (err, portsList)
@@ -300,7 +301,9 @@ function main() {
 							adapter.log.info("Error Open Port");
 							stopScript();
 						}
-						const parser = port.pipe(new ByteLength({length: 13}));
+						port.flush();
+						var parser = port.pipe(new ByteLength({length: 13}));
+						//const parser = port.pipe(new Ready({data: 13}));
 						adapter.log.info("SerialPort open!");
 
 						// initial all states with the actual actuator state
@@ -495,12 +498,24 @@ function analyzeSerialData(data)
 	else
 	{
 		adapter.log.info('Data Error: ' + data.toString('hex'));
-	    while(port.read() != null)
-        {
-            adapter.log.info("SerialPort empty buffer!");
-        }
-        g_SystemState = 'STANDBY';
-        startSyncstate();
+		port.close();
+		setTimeout(function () {
+            process.exit(-100); // simulate scheduled restart
+        }, 500);
+//	    port.pause();
+//        port.flush();
+//        while(port.read() != null)
+//        {
+//            adapter.log.info("SerialPort empty buffer!");
+//        }
+//	    parser = port.pipe(new ByteLength({length: 13}));
+//	    port.resume();
+//	    adapter.log.info('Parser Reset finish!');
+//	    //setTimeout(function () {
+//        //    process.exit(-100); // simulate scheduled restart
+//        //}, 5000);
+//        g_SystemState = 'STANDBY';
+//        startSyncstate();
 		// port.flush();
 		// port.flush(function(error){ adapter.log.info('Data Error: ' +
 		// port.read().toString('hex'));});
@@ -511,7 +526,7 @@ function writeAndDrain (data, callback)
 {
 	port.write(data);
 	port.drain(callback);
-    responseTimeoutID = setTimeout(responseTimeout, 2000, data);
+    //responseTimeoutID = setTimeout(responseTimeout, 2000, data);
 };
 
 function sendMsg( command, address, payload )

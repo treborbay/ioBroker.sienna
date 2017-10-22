@@ -29,11 +29,11 @@
 
     // Dictionary (systemDictionary is global variable from adapter-settings.js)
     systemDictionary = {
-        "sienna adapter settings": {"de": "Beispiel", "ru": "Пример"},
+        "sienna adapter settings": {"en": "sienna adapter settings", "de": "Sienna Adapter Einstellungen", "ru": "Пример"},
         "test1":                    {"en": "Test 1", "de": "Test 1", "ru": "Тест 1"},
         "test2":                    {"en": "Test 2", "de": "Test 2", "ru": "Тест 2"},
         "on save adapter restarts with new config immediately": {
-            "de": "Beim Speichern von Einstellungen der Adapter wird sofort neu gestartet.",
+            "de": "Beim Speichern von Einstellungen wird der Adapter sofort neu gestartet.",
             "ru": "Сразу после сохранения настроек драйвер перезапуститься с новыми значениями"
         }
     };
@@ -80,8 +80,8 @@
         <td><h3 class="translate">sienna adapter settings</h3></td>
     </tr></table>
     <p>
-        <span class="translate">test1</span> <input class="value" id="test1"/><br>
-        <span class="translate">test2</span> <input class="value" id="test2"/><br>
+        <span class="translate">test1</span> <input type="checkbox" class="value" id="test1"/><br>
+        <span class="translate">test2</span> <input type="text" class="value" id="test2"/><br>
     </p>
 
     <p class="translate">on save adapter restarts with new config immediately</p>
