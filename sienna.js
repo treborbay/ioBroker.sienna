@@ -27,6 +27,7 @@
 var utils = require(__dirname + '/lib/utils'); // Get common adapter utils
 const SerialPort = require("serialport");
 const ByteLength = SerialPort.parsers.ByteLength;
+var restartPort=true;
 //const Ready = SerialPort.parsers.Ready;
 
 //you have to call the adapter function and pass a options object
@@ -123,6 +124,7 @@ adapter.on('unload', function (callback) {
 	try {
 		if (port)
 		{
+		    restartPort = false;
 			// close connection
 			port.close(function (error)
 					{
@@ -222,9 +224,9 @@ adapter.on('ready', function () {
 function main() {
 
 	// The adapters config (in the instance object everything under the attribute "native") is accessible via adapter.config:
-	adapter.log.info('config test1: ' + adapter.config.test1);
+	adapter.log.info('config LearnNewDevices: ' + adapter.config.LearnNewDevices);
 	adapter.log.info('config test1: ' + adapter.config.test2);
-
+	adapter.config.LearnNewDevices = false;
 
 	/**
 	 * 
@@ -302,7 +304,8 @@ function main() {
 							stopScript();
 						}
 						port.flush();
-						var parser = port.pipe(new ByteLength({length: 13}));
+						var byteLengthParser = new ByteLength({length: 13})
+						const parser = port.pipe(byteLengthParser);
 						//const parser = port.pipe(new Ready({data: 13}));
 						adapter.log.info("SerialPort open!");
 
@@ -315,7 +318,6 @@ function main() {
 								{
         							// port.set({brk:false, cts:true, dsr:true,
         							// dtr:true, rts:true});
-        							port.flush(function(error){});
         							adapter.log.info('Open');
 								});
 
@@ -332,6 +334,16 @@ function main() {
         								}
         							});
 							});
+	                    port.on('close',
+	                              function()
+	                              {
+                                    if (restartPort)
+                                    {
+	                                  g_SystemState = 'STANDBY'
+	                                  byteLengthParser = new ByteLength({length: 13})
+	                                  port.open(startSyncstate())
+                                    }
+	                              });
 						parser.on('data', analyzeSerialData);
 					});
 			}
@@ -499,9 +511,10 @@ function analyzeSerialData(data)
 	{
 		adapter.log.info('Data Error: ' + data.toString('hex'));
 		port.close();
-		setTimeout(function () {
-            process.exit(-100); // simulate scheduled restart
-        }, 500);
+//		setTimeout(function () {
+//            process.exit(-100); // simulate scheduled restart
+//        }, 500);
+		
 //	    port.pause();
 //        port.flush();
 //        while(port.read() != null)

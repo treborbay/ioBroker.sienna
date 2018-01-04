@@ -31,7 +31,7 @@
         "type":                     "hardware"
     },
     "native": {
-        "test1": true,
+        "LearnNewDevices": false,
         "test2": 42
     },
     "objects": [
