@@ -118,6 +118,9 @@ var neuronIdStringList=[];
 var neuronIdStringListIndex = 0;
 var port = 0;
 var responseTimeoutID = 0;
+var syncTimeoutID = 0;
+var msgK1 = Buffer.from([0x2a, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x98/* crc */, 0x00 ]);
+var msgTimestampK1 = 0;
 
 //is called when adapter shuts down - callback has to be called under any circumstances!
 adapter.on('unload', function (callback) {
@@ -174,7 +177,8 @@ adapter.on('stateChange', function (id, state) {
 		    adapter.getObject(id,
 	            function(err,obj)
 	            {
-		            //adapter.log.info(JSON.stringify(obj));
+		            //adapter.log.info(JSON.stringify(obj.state.val));
+		            // adapter.log.info(JSON.stringify(obj));
     	            adapter.log.info("Group: " + obj.native.group + "; Element: "+ obj.native.element + "; Switch: " + state.val);
     	            if(state.val === true)
     	            {
@@ -225,8 +229,15 @@ function main() {
 
 	// The adapters config (in the instance object everything under the attribute "native") is accessible via adapter.config:
 	adapter.log.info('config LearnNewDevices: ' + adapter.config.LearnNewDevices);
-	adapter.log.info('config test1: ' + adapter.config.test2);
-	adapter.config.LearnNewDevices = false;
+	adapter.config.instancename = 'system.adapter.' + adapter.namespace;
+	adapter.log.info("Et: " +adapter.config.instancename);
+	//adapter.setForeignObject(adapter.config.instancename + ".native", {'LearnNewDevices':true});
+	//ToDo create state  
+    //	    JSON.stringify(obj)
+	//                if (!obj || !obj.common) {
+	//                    callback && callback('Unknown ID: ' + data.id);
+    //            } else {
+	//adapter.config.LearnNewDevices = false;
 
 	/**
 	 * 
@@ -284,7 +295,14 @@ function main() {
 		}
 		portsList.forEach(function(portInfo)
 		{
-			if((portInfo.vendorId === '0403' && portInfo.productId === 'SIENNA Serial Interface') || (portInfo.vendorId === '0x0403' && portInfo.productId === '0x6001'))
+//            adapter.log.info(portInfo.comName);
+//            adapter.log.info(portInfo.pnpId);
+//            adapter.log.info(portInfo.manufacturer);
+//            adapter.log.info(portInfo.serialNumber);
+//            // adapter.log.info(portInfo.locationId);
+//            adapter.log.info(portInfo.vendorId);
+//            adapter.log.info(portInfo.productId);
+			if((portInfo.vendorId === '0403' && portInfo.productId === '6001') || (portInfo.vendorId === '0x0403' && portInfo.productId === '0x6001'))
 			{
 				adapter.log.info(portInfo.comName);
 				adapter.log.info(portInfo.pnpId);
@@ -325,20 +343,27 @@ function main() {
 					        function(err)
 							{
     							adapter.log.info('Error: ', err.name);
-    							port.close(
-    						        function (error)
-    						        {
-        								if(error)
-        								{
-        									adapter.log.info('Closed ERROR');
-        								}
-        							});
+    							port.close();
+//    						        function (error)
+//    						        {
+//        								if(error)
+//        								{
+//        									adapter.log.info('Closed ERROR');
+//        								}
+//        							});
 							});
 	                    port.on('close',
-	                              function()
+	                              function(err)
 	                              {
+	                                if(err)
+	                                {
+	                                    process.exit(-100);
+	                                    return;
+	                                }
                                     if (restartPort)
                                     {
+                                      clearTimeout(responseTimeoutID);
+                                      clearTimeout(syncTimeoutID);
 	                                  g_SystemState = 'STANDBY'
 	                                  byteLengthParser = new ByteLength({length: 13})
 	                                  port.open(startSyncstate())
@@ -366,17 +391,18 @@ function startSyncstate()
                 {
                     g_syncList.push(id);
                 }
-                try
+                if(g_syncList.length>0)
                 {
                     sendRequest(g_syncList[0]);
                 }
-                catch (e)
+                else
                 {
-                    adapter.log.info('No States');
+                    adapter.log.info('No Sienna Devices known! Please learn new devices!');
                     adapter.log.info(g_SystemState + ' finished');
                     g_SystemState = 'STANDBY';
                 }
             });
+        syncTimeoutID = setTimeout(port.close, 9000)
     }
     else
     {
@@ -410,12 +436,14 @@ function responseTimeout(data)
 
 function analyzeSerialData(data)
 {
+    if(responseTimeoutID != 0)
+    {
+        adapter.log.info( 'Clear Timeout');
+        clearTimeout(responseTimeoutID);            
+    }
+
 	if(data[0] === 0x2a && data[12]===0x00)
 	{
-	    if(responseTimeoutID != 0)
-        {
-	        clearTimeout(responseTimeoutID);	        
-        }
 	    adapter.log.info('Recv Data: ' + data.toString('hex'));
 		if(data[1]==STATUS_ON)
 		{
@@ -432,6 +460,11 @@ function analyzeSerialData(data)
 		    adapter.log.debug("SWITCH Toggle")
 			// do nothing ;-)
 		}
+		else if(data[1]==GO)
+        {
+            adapter.log.debug("GO Push button released")
+            // do nothing ;-)
+        }
         else if(data[1]==STOP_GO)
         {
             adapter.log.debug("STOP_GO Push button released")
@@ -503,6 +536,7 @@ function analyzeSerialData(data)
 				//ToDo: asynchron only after receive message valid adapter.log.info(g_SystemState + ' finished');
 				g_SystemState = 'STANDBY';
 				adapter.log.info('SYNCSTATE finished');
+				clearTimeout(syncTimeoutID);
 				adapter.log.info(g_SystemState);
 			}
 		}
@@ -510,6 +544,10 @@ function analyzeSerialData(data)
 	else
 	{
 		adapter.log.info('Data Error: ' + data.toString('hex'));
+        g_SystemState = 'STANDBY'
+        //port.pause();
+        //byteLengthParser = new ByteLength({length: 13})
+        //port.resume();
 		port.close();
 //		setTimeout(function () {
 //            process.exit(-100); // simulate scheduled restart
@@ -539,12 +577,12 @@ function writeAndDrain (data, callback)
 {
 	port.write(data);
 	port.drain(callback);
-    //responseTimeoutID = setTimeout(responseTimeout, 2000, data);
 };
 
 function sendMsg( command, address, payload )
 {
 	var msg = Buffer.from([0x2a, command, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x98/* crc */, 0x00 ]);
+	var msgTimestamp = Date.now();
 	if(command & 0x80 )
 	{
 		msg[2] = address[0];
@@ -579,12 +617,28 @@ function sendMsg( command, address, payload )
 		}
 	}
 	msg[11] = crc;
+	
+	//Entprellung für 200 ms z.B für mobileUI state change 
+	if( msgK1.equals(msg) && (msgTimestamp - msgTimestampK1)< 200)
+    {
+	    adapter.log.info( 'Double send msg. Second msg ignored!');
+	    return;
+    }
+	
+    msgK1 = msg;
+    msgTimestampK1 = msgTimestamp;
 	writeAndDrain(msg, 
     function()
     {
        adapter.log.info( 'Send msg: ' + msg.toString('hex'));
     });
+    responseTimeoutID = setTimeout(writeAndDrain, 2000, msg, output);
 };
+
+function output()
+{
+    adapter.log.info( 'Timeout send msg! Repeat');
+}
 
 function createStateForDevice( siennaDevice )
 {

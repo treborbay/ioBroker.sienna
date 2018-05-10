@@ -25,7 +25,7 @@
     "url": "https://github.com/treborbay/ioBroker.sienna"
   },
   "dependencies": {
-  	  "serialport": "^5.0.0"
+  	  "serialport": ">=6.0.0"
   },
   "devDependencies": {
       "grunt": "^0.4.5",

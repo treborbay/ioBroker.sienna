@@ -57,6 +57,15 @@
         }
         // Signal to admin, that no changes yet
         onChange(false);
+        //{icons: {primary: 'ui-icon-plus'}, text: false}).css({width: '26px', height: '26px'}
+        $('#add_device').button().click(function () {
+            socket.emit('setObject', function (err) {
+                informInstance("et");
+                if (err) {
+                    window.alert(err);
+                }
+            });
+        });
     }
 
     // ... and the function save has to exist.
@@ -69,6 +78,11 @@
             obj[$this.attr('id')] = $this.val();
         });
         callback(obj);
+    }
+    
+    function informInstance(id) {
+        window.alert(JSON.stringify(id));
+        sendTo(null, 'update', id);
     }
 </script>
 
@@ -83,7 +97,9 @@
         <span class="translate">LearnNewDevices</span> <input type="checkbox" class="value" id="LearnNewDevices"/><br>
         <!-- <span class="translate">test2</span> <input type="text" class="value" id="test2"/><br> -->
     </p>
-
+    <p>
+           <button id="add_device" title="Add device" class="translateT" style="margin-left: 1em; display: inline-block">Test</button>
+	</p>
     <p class="translate">on save adapter restarts with new config immediately</p>
 
 </div>
