@@ -124,75 +124,75 @@ var msgTimestampK1 = 0;
 
 //is called when adapter shuts down - callback has to be called under any circumstances!
 adapter.on('unload', function (callback) {
-	try {
-		if (port)
-		{
-		    restartPort = false;
-			// close connection
-			port.close(function (error)
-					{
-				if(error){adapter.log.info('OnStop closed ERROR')}
-					});
-			adapter.log.info("SerialPort closed!");
-		}
-		adapter.log.info('cleaned everything up...');
-		callback();
-	} catch (e) {
-		callback();
-	}
+    try {
+        if (port)
+        {
+            restartPort = false;
+            // close connection
+            port.close(function (error)
+                    {
+                if(error){adapter.log.info('OnStop closed ERROR')}
+                    });
+            adapter.log.info("SerialPort closed!");
+        }
+        adapter.log.info('cleaned everything up...');
+        callback();
+    } catch (e) {
+        callback();
+    }
 });
 
 //is called if a subscribed object changes
 adapter.on('objectChange', function (id, obj) {
-	// Warning, obj can be null if it was deleted
-	adapter.log.info('objectChange ' + id + ' ' + JSON.stringify(obj));
+    // Warning, obj can be null if it was deleted
+    adapter.log.info('objectChange ' + id + ' ' + JSON.stringify(obj));
 });
 
 //is called if a subscribed state changes
 adapter.on('stateChange', function (id, state) {
-	// Warning, state can be null if it was deleted
-	adapter.log.debug('stateChange ' + id + ' ' + JSON.stringify(state));
+    // Warning, state can be null if it was deleted
+    adapter.log.debug('stateChange ' + id + ' ' + JSON.stringify(state));
 
-	// you can use the ack flag to detect if it is status (true) or command (false)
-	if (state && !state.ack)
-	{
-		adapter.log.debug('ack is not set!');
-		adapter.log.debug(g_SystemState);
-		if(id === "learnNewDevices"){
-			if(g_SystemState === 'STANDBY')
-			{
-				g_SystemState = 'LEARNING';
-				adapter.log.debug(g_SystemState);
-				devicesDict = {};
-				sendMsg(FIND_DEVICES , [0x0, 0x0], 0x0 );
-			}
-			else
-			{
-				adapter.log.info(g_SystemState +' allready running!');
-			}
-		}
-		else if(/^group\.\d+\.\d+\.switch$/.test(id))
-		{
-		    //adapter.get
-		    adapter.getObject(id,
-	            function(err,obj)
-	            {
-		            //adapter.log.info(JSON.stringify(obj.state.val));
-		            // adapter.log.info(JSON.stringify(obj));
-    	            adapter.log.info("Group: " + obj.native.group + "; Element: "+ obj.native.element + "; Switch: " + state.val);
-    	            if(state.val === true)
-    	            {
-    	                sendMsg(ON , [obj.native.group, obj.native.element], 0x00 );
-    	            }
-    	            else
-    	            {
-    	                sendMsg(OFF , [obj.native.group, obj.native.element], 0x00 );
-    	            }
-	            }
-		    );
-		}
-		else if(/^group\.\d+\.\d+\.dimmer$/.test(id))
-		{
+    // you can use the ack flag to detect if it is status (true) or command (false)
+    if (state && !state.ack)
+    {
+        adapter.log.debug('ack is not set!');
+        adapter.log.debug(g_SystemState);
+        if(id === "learnNewDevices"){
+            if(g_SystemState === 'STANDBY')
+            {
+                g_SystemState = 'LEARNING';
+                adapter.log.debug(g_SystemState);
+                devicesDict = {};
+                sendMsg(FIND_DEVICES , [0x0, 0x0], 0x0 );
+            }
+            else
+            {
+                adapter.log.info(g_SystemState +' allready running!');
+            }
+        }
+        else if(/^group\.\d+\.\d+\.switch$/.test(id))
+        {
+            //adapter.get
+            adapter.getObject(id,
+                function(err,obj)
+                {
+                    //adapter.log.info(JSON.stringify(obj.state.val));
+                    // adapter.log.info(JSON.stringify(obj));
+                    adapter.log.info("Group: " + obj.native.group + "; Element: "+ obj.native.element + "; Switch: " + state.val);
+                    if(state.val === true)
+                    {
+                        sendMsg(ON , [obj.native.group, obj.native.element], 0x00 );
+                    }
+                    else
+                    {
+                        sendMsg(OFF , [obj.native.group, obj.native.element], 0x00 );
+                    }
+                }
+            );
+        }
+        else if(/^group\.\d+\.\d+\.dimmer$/.test(id))
+        {
           adapter.getObject(id,
                   function(err,obj)
                   {
@@ -200,26 +200,26 @@ adapter.on('stateChange', function (id, state) {
                       sendMsg(SET_DIM_VALUE , [obj.native.group, obj.native.element], state.val * 2 );
                   }
           );
-		}
-	}
+        }
+    }
 });
 
 //Some message was sent to adapter instance over message box. Used by email, pushover, text2speech, ...
 adapter.on('message', function (obj) {
-	if (typeof obj == 'object' && obj.message) {
-		if (obj.command == 'send') {
-			// e.g. send email or pushover or whatever
-			adapter.log.info('send command');
+    if (typeof obj == 'object' && obj.message) {
+        if (obj.command == 'send') {
+            // e.g. send email or pushover or whatever
+            adapter.log.info('send command');
 
-			// Send response in callback if required
-			if (obj.callback) adapter.sendTo(obj.from, obj.command, 'Message received', obj.callback);
-		}
-	}
+            // Send response in callback if required
+            if (obj.callback) adapter.sendTo(obj.from, obj.command, 'Message received', obj.callback);
+        }
+    }
 });
 
 //is called when databases are connected and adapter received configuration. start here!
 adapter.on('ready', function () {
-	main();
+    main();
 });
 
 
@@ -227,74 +227,74 @@ adapter.on('ready', function () {
 //functions
 function main() {
 
-	// The adapters config (in the instance object everything under the attribute "native") is accessible via adapter.config:
-	adapter.log.info('config LearnNewDevices: ' + adapter.config.LearnNewDevices);
-	adapter.config.instancename = 'system.adapter.' + adapter.namespace;
-	adapter.log.info("Et: " +adapter.config.instancename);
-	//adapter.setForeignObject(adapter.config.instancename + ".native", {'LearnNewDevices':true});
-	//ToDo create state  
-    //	    JSON.stringify(obj)
-	//                if (!obj || !obj.common) {
-	//                    callback && callback('Unknown ID: ' + data.id);
+    // The adapters config (in the instance object everything under the attribute "native") is accessible via adapter.config:
+    adapter.log.info('config LearnNewDevices: ' + adapter.config.LearnNewDevices);
+    adapter.config.instancename = 'system.adapter.' + adapter.namespace;
+    adapter.log.info("Et: " +adapter.config.instancename);
+    //adapter.setForeignObject(adapter.config.instancename + ".native", {'LearnNewDevices':true});
+    //ToDo create state  
+    //      JSON.stringify(obj)
+    //                if (!obj || !obj.common) {
+    //                    callback && callback('Unknown ID: ' + data.id);
     //            } else {
-	//adapter.config.LearnNewDevices = false;
+    //adapter.config.LearnNewDevices = false;
 
-	/**
-	 * 
-	 * For every state in the system there has to be also an object of type
-	 * state
-	 * 
-	 * Here a simple sienna for a boolean variable named "testVariable"
-	 * 
-	 * Because every adapter instance uses its own unique namespace variable
-	 * names can't collide with other adapters variables
-	 * 
-	 */
+    /**
+     * 
+     * For every state in the system there has to be also an object of type
+     * state
+     * 
+     * Here a simple sienna for a boolean variable named "testVariable"
+     * 
+     * Because every adapter instance uses its own unique namespace variable
+     * names can't collide with other adapters variables
+     * 
+     */
 
-	adapter.setObject('trigger', {
-		type: 'state',
-		common: {
-			name: 'trigger',
-			type: 'number',
-			role: 'indicator'
-		},
-		native: {}
-	});
+    adapter.setObject('trigger', {
+        type: 'state',
+        common: {
+            name: 'trigger',
+            type: 'number',
+            role: 'indicator'
+        },
+        native: {}
+    });
 
-	adapter.setObject('learnNewDevices', {
-		type: 'state',
-		common: {
-			name: 'learnNewDevices',
-			type: 'boolean',
-			role: 'indicator'
-		},
-		native: {}
-	});
-
-
-	// in this sienna all states changes inside the adapters namespace are subscribed
-	adapter.subscribeStates('*');
+    adapter.setObject('learnNewDevices', {
+        type: 'state',
+        common: {
+            name: 'learnNewDevices',
+            type: 'boolean',
+            role: 'indicator'
+        },
+        native: {}
+    });
 
 
-//	// examples for the checkPassword/checkGroup functions
-//	adapter.checkPassword('admin', 'iobroker', function (res) {
-//		adapter.log.info('check user admin pw ioboker: ' + res);
-//	});
+    // in this sienna all states changes inside the adapters namespace are subscribed
+    adapter.subscribeStates('*');
+
+
+//  // examples for the checkPassword/checkGroup functions
+//  adapter.checkPassword('admin', 'iobroker', function (res) {
+//      adapter.log.info('check user admin pw ioboker: ' + res);
+//  });
 //
-//	adapter.checkGroup('admin', 'admin', function (res) {
-//		adapter.log.info('check group user admin group admin: ' + res);
-//	});
+//  adapter.checkGroup('admin', 'admin', function (res) {
+//      adapter.log.info('check group user admin group admin: ' + res);
+//  });
 
 
-	SerialPort.list(function (err, portsList)
-			{
-		if(err)
-		{
-			adapter.log.info("Error Open Port");
-			stopScript();
-		}
-		portsList.forEach(function(portInfo)
-		{
+    SerialPort.list(function (err, portsList)
+            {
+        if(err)
+        {
+            adapter.log.info("Error Open Port");
+            stopScript();
+        }
+        portsList.forEach(function(portInfo)
+        {
 //            adapter.log.info(portInfo.comName);
 //            adapter.log.info(portInfo.pnpId);
 //            adapter.log.info(portInfo.manufacturer);
@@ -302,78 +302,78 @@ function main() {
 //            // adapter.log.info(portInfo.locationId);
 //            adapter.log.info(portInfo.vendorId);
 //            adapter.log.info(portInfo.productId);
-			if((portInfo.vendorId === '0403' && portInfo.productId === '6001') || (portInfo.vendorId === '0x0403' && portInfo.productId === '0x6001'))
-			{
-				adapter.log.info(portInfo.comName);
-				adapter.log.info(portInfo.pnpId);
-				adapter.log.info(portInfo.manufacturer);
-				adapter.log.info(portInfo.serialNumber);
-				// adapter.log.info(portInfo.locationId);
-				adapter.log.info(portInfo.vendorId);
-				adapter.log.info(portInfo.productId);
-				port = new SerialPort(portInfo.comName, { baudRate: 9600, // parser: SerialPort.parsers.byteLength(13),
-					dataBits: 8, stopBits: 1, parity: 'none',
-					rtscts: true, xon: true, xoff:true, lock: true },
-					function (error)
-					{
-						if(error)
-						{
-							adapter.log.info("Error Open Port");
-							stopScript();
-						}
-						port.flush();
-						var byteLengthParser = new ByteLength({length: 13})
-						const parser = port.pipe(byteLengthParser);
-						//const parser = port.pipe(new Ready({data: 13}));
-						adapter.log.info("SerialPort open!");
+            if((portInfo.vendorId === '0403' && portInfo.productId === '6001') || (portInfo.vendorId === '0x0403' && portInfo.productId === '0x6001'))
+            {
+                adapter.log.info(portInfo.comName);
+                adapter.log.info(portInfo.pnpId);
+                adapter.log.info(portInfo.manufacturer);
+                adapter.log.info(portInfo.serialNumber);
+                // adapter.log.info(portInfo.locationId);
+                adapter.log.info(portInfo.vendorId);
+                adapter.log.info(portInfo.productId);
+                port = new SerialPort(portInfo.comName, { baudRate: 9600, // parser: SerialPort.parsers.byteLength(13),
+                    dataBits: 8, stopBits: 1, parity: 'none',
+                    rtscts: true, xon: true, xoff:true, lock: true },
+                    function (error)
+                    {
+                        if(error)
+                        {
+                            adapter.log.info("Error Open Port");
+                            stopScript();
+                        }
+                        port.flush();
+                        var byteLengthParser = new ByteLength({length: 13})
+                        const parser = port.pipe(byteLengthParser);
+                        //const parser = port.pipe(new Ready({data: 13}));
+                        adapter.log.info("SerialPort open!");
 
-						// initial all states with the actual actuator state
-						startSyncstate();
+                        // initial all states with the actual actuator state
+                        startSyncstate();
 
-						// serial port events
-						port.on('open',
-					        function() 
-								{
-        							// port.set({brk:false, cts:true, dsr:true,
-        							// dtr:true, rts:true});
-        							adapter.log.info('Open');
-								});
+                        // serial port events
+                        port.on('open',
+                            function() 
+                                {
+                                    // port.set({brk:false, cts:true, dsr:true,
+                                    // dtr:true, rts:true});
+                                    adapter.log.info('Open');
+                                });
 
-						port.on('error',
-					        function(err)
-							{
-    							adapter.log.info('Error: ', err.name);
-    							port.close();
-//    						        function (error)
-//    						        {
-//        								if(error)
-//        								{
-//        									adapter.log.info('Closed ERROR');
-//        								}
-//        							});
-							});
-	                    port.on('close',
-	                              function(err)
-	                              {
-	                                if(err)
-	                                {
-	                                    process.exit(-100);
-	                                    return;
-	                                }
+                        port.on('error',
+                            function(err)
+                            {
+                                adapter.log.info('Error: ', err.name);
+                                port.close();
+//                                  function (error)
+//                                  {
+//                                      if(error)
+//                                      {
+//                                          adapter.log.info('Closed ERROR');
+//                                      }
+//                                  });
+                            });
+                        port.on('close',
+                                  function(err)
+                                  {
+                                    if(err)
+                                    {
+                                        process.exit(-100);
+                                        return;
+                                    }
                                     if (restartPort)
                                     {
                                       clearTimeout(responseTimeoutID);
                                       clearTimeout(syncTimeoutID);
-	                                  g_SystemState = 'STANDBY'
-	                                  byteLengthParser = new ByteLength({length: 13})
-	                                  port.open(startSyncstate())
+                                      g_SystemState = 'STANDBY'
+                                      byteLengthParser = new ByteLength({length: 13})
+                                      port.open(startSyncstate())
                                     }
-	                              });
-						parser.on('data', analyzeSerialData);
-					});
-			}
-				});
-			});
+                                  });
+                        parser.on('data', analyzeSerialData);
+                    });
+            }
+                });
+            });
 };
 
 function startSyncstate()
@@ -394,6 +394,8 @@ function startSyncstate()
                 if(g_syncList.length>0)
                 {
                     sendRequest(g_syncList[0]);
+                    adapter.log.info(g_SystemState + ' syncTimeout watchdog started');
+                    syncTimeoutID = setTimeout(function () {port.close;}, 9000);
                 }
                 else
                 {
@@ -402,7 +404,6 @@ function startSyncstate()
                     g_SystemState = 'STANDBY';
                 }
             });
-        syncTimeoutID = setTimeout(port.close, 9000)
     }
     else
     {
@@ -442,25 +443,25 @@ function analyzeSerialData(data)
         clearTimeout(responseTimeoutID);            
     }
 
-	if(data[0] === 0x2a && data[12]===0x00)
-	{
-	    adapter.log.info('Recv Data: ' + data.toString('hex'));
-		if(data[1]==STATUS_ON)
-		{
-			// adapter.setState (id, state, ack, callback);
-			adapter.setState("group."+data[2]+"."+data[3]+".switch", true, true);
-		}
-		else if(data[1]==STATUS_OFF)
-		{
-			// adapter.setState (id, state, ack, callback);
-			adapter.setState("group."+data[2]+"."+data[3]+".switch", false, true);
-		}
-		else if(data[1]==SWITCH)
-		{
-		    adapter.log.debug("SWITCH Toggle")
-			// do nothing ;-)
-		}
-		else if(data[1]==GO)
+    if(data[0] === 0x2a && data[12]===0x00)
+    {
+        adapter.log.info('Recv Data: ' + data.toString('hex'));
+        if(data[1]==STATUS_ON)
+        {
+            // adapter.setState (id, state, ack, callback);
+            adapter.setState("group."+data[2]+"."+data[3]+".switch", true, true);
+        }
+        else if(data[1]==STATUS_OFF)
+        {
+            // adapter.setState (id, state, ack, callback);
+            adapter.setState("group."+data[2]+"."+data[3]+".switch", false, true);
+        }
+        else if(data[1]==SWITCH)
+        {
+            adapter.log.debug("SWITCH Toggle")
+            // do nothing ;-)
+        }
+        else if(data[1]==GO)
         {
             adapter.log.debug("GO Push button released")
             // do nothing ;-)
@@ -470,164 +471,169 @@ function analyzeSerialData(data)
             adapter.log.debug("STOP_GO Push button released")
             // do nothing ;-)
         }
-		else if(data[1]==REPORT_DIM_VALUE)
-		{
-			// adapter.setState (id, state, ack, callback);
-			adapter.setState("group."+data[2]+"."+data[3]+".dimmer", data[4]/2, true);
-			if(data[4] > 0)
-			{
-				adapter.setState("group."+data[2]+"."+data[3]+".switch", true, true);
-			}
-			else
-			{
-				adapter.setState("group."+data[2]+"."+data[3]+".switch", false, true);
-			}
-		}
-		else if(data[1]==DEVICE_FOUND)
-		{
-			var neuronId = Buffer.from(data.slice(2,8));
-			devicesDict[neuronId.toString('hex')] = {address:neuronId}; // neuronID
-			// as
-			// number
-			adapter.log.info(neuronId.toString('hex'));
-		}
-		else if(data[1]==HELLO_EXTEND_RESPONSE)
-		{
-			adapter.log.info('HELLO_EXTEND_RESPONSE');
-			devicesDict[neuronIdStringList[neuronIdStringListIndex]].group = data[8];
-			devicesDict[neuronIdStringList[neuronIdStringListIndex]].element = data[9];
-			devicesDict[neuronIdStringList[neuronIdStringListIndex]].typ = data[2];
-			devicesDict[neuronIdStringList[neuronIdStringListIndex]].SWtyp = data[3];
-			createStateForDevice(devicesDict[neuronIdStringList[neuronIdStringListIndex]]);
-			if(g_SystemState === 'LEARNING')
-			{   
-				neuronIdStringListIndex++;
-				if(neuronIdStringListIndex < neuronIdStringList.length )
-				{
-					sendMsg(HELLO_DEVICE , devicesDict[neuronIdStringList[neuronIdStringListIndex]].address, 0x0 );
-				}
-				else
-				{
-					adapter.log.info('learnNewDevices finished');
-					g_SystemState = 'STANDBY';
-				}
-			}
-		}
-		else if(data[1]==FIND_END)
-		{
-			neuronIdStringList = Object.keys(devicesDict);
-			neuronIdStringListIndex = 0;
-			sendMsg(HELLO_DEVICE , devicesDict[neuronIdStringList[0]].address, 0x0 );
-		}
-		else
-		{
-			adapter.log.info('Data unknown: ' + data.toString('hex'));
-		}
-		if(g_SystemState === 'SYNCSTATE')
-		{   
-		    //adapter.log.info(g_syncListIndex + '<' + g_syncList.length);
-		    g_syncListIndex++;
-			if(g_syncListIndex < g_syncList.length )
-			{
-				sendRequest(g_syncList[g_syncListIndex]);
-			}
-			else
-			{
-				//ToDo: asynchron only after receive message valid adapter.log.info(g_SystemState + ' finished');
-				g_SystemState = 'STANDBY';
-				adapter.log.info('SYNCSTATE finished');
-				clearTimeout(syncTimeoutID);
-				adapter.log.info(g_SystemState);
-			}
-		}
-	}
-	else
-	{
-		adapter.log.info('Data Error: ' + data.toString('hex'));
+        else if(data[1]==REPORT_DIM_VALUE)
+        {
+            // adapter.setState (id, state, ack, callback);
+            adapter.setState("group."+data[2]+"."+data[3]+".dimmer", data[4]/2, true);
+            if(data[4] > 0)
+            {
+                adapter.setState("group."+data[2]+"."+data[3]+".switch", true, true);
+            }
+            else
+            {
+                adapter.setState("group."+data[2]+"."+data[3]+".switch", false, true);
+            }
+        }
+        else if(data[1]==DEVICE_FOUND)
+        {
+            var neuronId = Buffer.from(data.slice(2,8));
+            devicesDict[neuronId.toString('hex')] = {address:neuronId}; // neuronID
+            // as
+            // number
+            adapter.log.info(neuronId.toString('hex'));
+        }
+        else if(data[1]==HELLO_EXTEND_RESPONSE)
+        {
+            adapter.log.info('HELLO_EXTEND_RESPONSE');
+            devicesDict[neuronIdStringList[neuronIdStringListIndex]].group = data[8];
+            devicesDict[neuronIdStringList[neuronIdStringListIndex]].element = data[9];
+            devicesDict[neuronIdStringList[neuronIdStringListIndex]].typ = data[2];
+            devicesDict[neuronIdStringList[neuronIdStringListIndex]].SWtyp = data[3];
+            createStateForDevice(devicesDict[neuronIdStringList[neuronIdStringListIndex]]);
+            if(g_SystemState === 'LEARNING')
+            {   
+                neuronIdStringListIndex++;
+                if(neuronIdStringListIndex < neuronIdStringList.length )
+                {
+                    sendMsg(HELLO_DEVICE , devicesDict[neuronIdStringList[neuronIdStringListIndex]].address, 0x0 );
+                }
+                else
+                {
+                    adapter.log.info('learnNewDevices finished');
+                    g_SystemState = 'STANDBY';
+                }
+            }
+        }
+        else if(data[1]==FIND_END)
+        {
+            neuronIdStringList = Object.keys(devicesDict);
+            neuronIdStringListIndex = 0;
+            sendMsg(HELLO_DEVICE , devicesDict[neuronIdStringList[0]].address, 0x0 );
+        }
+        else if(data[1]==COMM_ERROR_SERIAL)
+        {
+            adapter.log.info('COMM_ERROR_SERIAL');
+            g_SystemState = 'STANDBY';
+        }
+        else
+        {
+            adapter.log.info('Data unknown: ' + data.toString('hex'));
+        }
+        if(g_SystemState === 'SYNCSTATE')
+        {   
+            //adapter.log.info(g_syncListIndex + '<' + g_syncList.length);
+            g_syncListIndex++;
+            if(g_syncListIndex < g_syncList.length )
+            {
+                sendRequest(g_syncList[g_syncListIndex]);
+            }
+            else
+            {
+                //ToDo: asynchron only after receive message valid adapter.log.info(g_SystemState + ' finished');
+                g_SystemState = 'STANDBY';
+                adapter.log.info('SYNCSTATE finished');
+                clearTimeout(syncTimeoutID);
+                adapter.log.info(g_SystemState);
+            }
+        }
+    }
+    else
+    {
+        adapter.log.info('Data Error: ' + data.toString('hex'));
         g_SystemState = 'STANDBY'
         //port.pause();
         //byteLengthParser = new ByteLength({length: 13})
         //port.resume();
-		port.close();
-//		setTimeout(function () {
+        port.close();
+//      setTimeout(function () {
 //            process.exit(-100); // simulate scheduled restart
 //        }, 500);
-		
-//	    port.pause();
+        
+//      port.pause();
 //        port.flush();
 //        while(port.read() != null)
 //        {
 //            adapter.log.info("SerialPort empty buffer!");
 //        }
-//	    parser = port.pipe(new ByteLength({length: 13}));
-//	    port.resume();
-//	    adapter.log.info('Parser Reset finish!');
-//	    //setTimeout(function () {
+//      parser = port.pipe(new ByteLength({length: 13}));
+//      port.resume();
+//      adapter.log.info('Parser Reset finish!');
+//      //setTimeout(function () {
 //        //    process.exit(-100); // simulate scheduled restart
 //        //}, 5000);
 //        g_SystemState = 'STANDBY';
 //        startSyncstate();
-		// port.flush();
-		// port.flush(function(error){ adapter.log.info('Data Error: ' +
-		// port.read().toString('hex'));});
-	}
+        // port.flush();
+        // port.flush(function(error){ adapter.log.info('Data Error: ' +
+        // port.read().toString('hex'));});
+    }
 };
 
 function writeAndDrain (data, callback)
 {
-	port.write(data);
-	port.drain(callback);
+    port.write(data);
+    port.drain(callback);
 };
 
 function sendMsg( command, address, payload )
 {
-	var msg = Buffer.from([0x2a, command, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x98/* crc */, 0x00 ]);
-	var msgTimestamp = Date.now();
-	if(command & 0x80 )
-	{
-		msg[2] = address[0];
-		msg[3] = address[1];
-		msg[4] = payload;
-	}
-	else
-	{
-		msg[2] = address[0];
-		msg[3] = address[1];
-		msg[4] = address[2];
-		msg[5] = address[3];
-		msg[6] = address[4];
-		msg[7] = address[5];
-		msg[8] = payload[0];
-		msg[9] = payload[1];
-		msg[10] = payload[2];
-	}
-	var crc=0;
-	for(var index=1; index < 11; index++)
-	{
-		var inByte = msg[index];
-		for( var bit=0; bit<8; bit++ )
-		{
-			var mix=(crc & 0x01)^(inByte & 0x01);
-			crc>>=1;
-			if(mix)
-			{
-				crc ^= 0x8c;
-			}
-			inByte >>= 1;
-		}
-	}
-	msg[11] = crc;
-	
-	//Entprellung für 200 ms z.B für mobileUI state change 
-	if( msgK1.equals(msg) && (msgTimestamp - msgTimestampK1)< 200)
+    var msg = Buffer.from([0x2a, command, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x98/* crc */, 0x00 ]);
+    var msgTimestamp = Date.now();
+    if(command & 0x80 )
     {
-	    adapter.log.info( 'Double send msg. Second msg ignored!');
-	    return;
+        msg[2] = address[0];
+        msg[3] = address[1];
+        msg[4] = payload;
     }
-	
+    else
+    {
+        msg[2] = address[0];
+        msg[3] = address[1];
+        msg[4] = address[2];
+        msg[5] = address[3];
+        msg[6] = address[4];
+        msg[7] = address[5];
+        msg[8] = payload[0];
+        msg[9] = payload[1];
+        msg[10] = payload[2];
+    }
+    var crc=0;
+    for(var index=1; index < 11; index++)
+    {
+        var inByte = msg[index];
+        for( var bit=0; bit<8; bit++ )
+        {
+            var mix=(crc & 0x01)^(inByte & 0x01);
+            crc>>=1;
+            if(mix)
+            {
+                crc ^= 0x8c;
+            }
+            inByte >>= 1;
+        }
+    }
+    msg[11] = crc;
+    
+    //Entprellung für 200 ms z.B für mobileUI state change 
+    if( msgK1.equals(msg) && (msgTimestamp - msgTimestampK1)< 200)
+    {
+        adapter.log.info( 'Double send msg. Second msg ignored!');
+        return;
+    }
+    
     msgK1 = msg;
     msgTimestampK1 = msgTimestamp;
-	writeAndDrain(msg, 
+    writeAndDrain(msg, 
     function()
     {
        adapter.log.info( 'Send msg: ' + msg.toString('hex'));
@@ -642,154 +648,154 @@ function output()
 
 function createStateForDevice( siennaDevice )
 {
-	// adapter.log.info(JSON.stringify(siennaDevice));
-	if(siennaDevice.typ === 100 && siennaDevice.SWtyp === 3) // 100 = SAMDR
-		// (tested)
-	{
-		adapter.log.info('SAMDR found: Create state, if not found!')
-//		createState("group."+siennaDevice.group+"."+siennaDevice.element+ ".dimmer",
-//		0, 0,
-//		{type: "number", name: "Dimmer"+siennaDevice.group+"."+siennaDevice.element,
-//		read: true, write: true, min: 0, max: 100},
-//		{neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ,
-//		group:siennaDevice.group, element:siennaDevice.element});
+    // adapter.log.info(JSON.stringify(siennaDevice));
+    if(siennaDevice.typ === 100 && siennaDevice.SWtyp === 3) // 100 = SAMDR
+        // (tested)
+    {
+        adapter.log.info('SAMDR found: Create state, if not found!')
+//      createState("group."+siennaDevice.group+"."+siennaDevice.element+ ".dimmer",
+//      0, 0,
+//      {type: "number", name: "Dimmer"+siennaDevice.group+"."+siennaDevice.element,
+//      read: true, write: true, min: 0, max: 100},
+//      {neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ,
+//      group:siennaDevice.group, element:siennaDevice.element});
 
-//		adapter.createState(siennaDevice.group, siennaDevice.element, "dimmer",
-//		{type: "number", name: "Dimmer"+siennaDevice.group+"."+siennaDevice.element, role: "indicator", read: true, write: true, min: 0, max: 100},
-//		{neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:siennaDevice.element});
-		adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element+ ".dimmer", {
-			type: 'state',
-			common: {
-				name: "Dimmer"+siennaDevice.group+"."+siennaDevice.element,
-				type: 'number',
-				role: 'indicator',
-				read: true,
-				write: true,
-				min: 0,
-				max: 100
-			},
-			native: {
-				neuronId: siennaDevice.address.toString('hex'),
-				deviceTyp: siennaDevice.typ,
-				group:siennaDevice.group,
-				element:siennaDevice.element
-			}
-		});
+//      adapter.createState(siennaDevice.group, siennaDevice.element, "dimmer",
+//      {type: "number", name: "Dimmer"+siennaDevice.group+"."+siennaDevice.element, role: "indicator", read: true, write: true, min: 0, max: 100},
+//      {neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:siennaDevice.element});
+        adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element+ ".dimmer", {
+            type: 'state',
+            common: {
+                name: "Dimmer"+siennaDevice.group+"."+siennaDevice.element,
+                type: 'number',
+                role: 'indicator',
+                read: true,
+                write: true,
+                min: 0,
+                max: 100
+            },
+            native: {
+                neuronId: siennaDevice.address.toString('hex'),
+                deviceTyp: siennaDevice.typ,
+                group:siennaDevice.group,
+                element:siennaDevice.element
+            }
+        });
 
-//		createState("group."+siennaDevice.group+"."+siennaDevice.element + ".switch",
-//		false, 0,
-//		{type: "boolean", name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
-//		write: true},
-//		{neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ,
-//		group:siennaDevice.group, element:siennaDevice.element});
-		adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", {
-			type: 'state',
-			common: {
-				name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
-				type: 'boolean',
-				role: 'indicator',
-				read: true,
-				write: true
-			},
-			native: {
-				neuronId: siennaDevice.address.toString('hex'),
-				deviceTyp: siennaDevice.typ,
-				group:siennaDevice.group,
-				element:siennaDevice.element
-			}
-		});
-	}
-	if(siennaDevice.typ === 99 && siennaDevice.SWtyp === 3) // 99 = SAM2L
-		// (tested)
-	{
-		adapter.log.info('SAM2L found: Create state, if not found!')
-//		createState("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", false, 0,
-//		{type: "boolean", name: "Switch"+siennaDevice.group+"."+siennaDevice.element, write: true},
-//		{neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:siennaDevice.element});
-		adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", {
-			type: 'state',
-			common: {
-				name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
-				type: 'boolean',
-				role: 'indicator',
-				read: true,
-				write: true
-			},
-			native: {
-				neuronId: siennaDevice.address.toString('hex'),
-				deviceTyp: siennaDevice.typ,
-				group:siennaDevice.group,
-				element:siennaDevice.element
-			}
-		});
+//      createState("group."+siennaDevice.group+"."+siennaDevice.element + ".switch",
+//      false, 0,
+//      {type: "boolean", name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
+//      write: true},
+//      {neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ,
+//      group:siennaDevice.group, element:siennaDevice.element});
+        adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", {
+            type: 'state',
+            common: {
+                name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
+                type: 'boolean',
+                role: 'indicator',
+                read: true,
+                write: true
+            },
+            native: {
+                neuronId: siennaDevice.address.toString('hex'),
+                deviceTyp: siennaDevice.typ,
+                group:siennaDevice.group,
+                element:siennaDevice.element
+            }
+        });
+    }
+    if(siennaDevice.typ === 99 && siennaDevice.SWtyp === 3) // 99 = SAM2L
+        // (tested)
+    {
+        adapter.log.info('SAM2L found: Create state, if not found!')
+//      createState("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", false, 0,
+//      {type: "boolean", name: "Switch"+siennaDevice.group+"."+siennaDevice.element, write: true},
+//      {neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:siennaDevice.element});
+        adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", {
+            type: 'state',
+            common: {
+                name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
+                type: 'boolean',
+                role: 'indicator',
+                read: true,
+                write: true
+            },
+            native: {
+                neuronId: siennaDevice.address.toString('hex'),
+                deviceTyp: siennaDevice.typ,
+                group:siennaDevice.group,
+                element:siennaDevice.element
+            }
+        });
 
-//		createState("group."+siennaDevice.group+"."+(siennaDevice.element+1) + ".switch", false, 0,
-//		{type: "boolean", name: "Switch"+siennaDevice.group+"."+(siennaDevice.element+1), write: true},
-//		{neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:(siennaDevice.element+1)});
-		adapter.setObjectNotExists("group."+siennaDevice.group+"."+(siennaDevice.element+1) + ".switch", {
-			type: 'state',
-			common: {
-				name: "Switch"+siennaDevice.group+"."+(siennaDevice.element+1),
-				type: 'boolean',
-				role: 'indicator',
-				read: true,
-				write: true
-			},
-			native: {
-				neuronId: siennaDevice.address.toString('hex'),
-				deviceTyp: siennaDevice.typ,
-				group:siennaDevice.group,
-				element:(siennaDevice.element+1)
-			}
-		});
-	}
-	if(siennaDevice.typ === 97 && siennaDevice.SWtyp === 1) // 97 = SAM1L
-		// (tested)
-	{
-		adapter.log.info('SAM1L found: Create state, if not found!')
-//		createState("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", false, 0,
-//		{type: "boolean", name: "Switch"+siennaDevice.group+"."+siennaDevice.element, write: true},
-//		{neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:siennaDevice.element});
-		adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", {
-			type: 'state',
-			common: {
-				name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
-				type: 'boolean',
-				role: 'indicator',
-				read: true,
-				write: true
-			},
-			native: {
-				neuronId: siennaDevice.address.toString('hex'),
-				deviceTyp: siennaDevice.typ,
-				group:siennaDevice.group,
-				element:siennaDevice.element
-			}
-		});
+//      createState("group."+siennaDevice.group+"."+(siennaDevice.element+1) + ".switch", false, 0,
+//      {type: "boolean", name: "Switch"+siennaDevice.group+"."+(siennaDevice.element+1), write: true},
+//      {neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:(siennaDevice.element+1)});
+        adapter.setObjectNotExists("group."+siennaDevice.group+"."+(siennaDevice.element+1) + ".switch", {
+            type: 'state',
+            common: {
+                name: "Switch"+siennaDevice.group+"."+(siennaDevice.element+1),
+                type: 'boolean',
+                role: 'indicator',
+                read: true,
+                write: true
+            },
+            native: {
+                neuronId: siennaDevice.address.toString('hex'),
+                deviceTyp: siennaDevice.typ,
+                group:siennaDevice.group,
+                element:(siennaDevice.element+1)
+            }
+        });
+    }
+    if(siennaDevice.typ === 97 && siennaDevice.SWtyp === 1) // 97 = SAM1L
+        // (tested)
+    {
+        adapter.log.info('SAM1L found: Create state, if not found!')
+//      createState("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", false, 0,
+//      {type: "boolean", name: "Switch"+siennaDevice.group+"."+siennaDevice.element, write: true},
+//      {neuronId: siennaDevice.address.toString('hex'), deviceTyp: siennaDevice.typ, group:siennaDevice.group, element:siennaDevice.element});
+        adapter.setObjectNotExists("group."+siennaDevice.group+"."+siennaDevice.element + ".switch", {
+            type: 'state',
+            common: {
+                name: "Switch"+siennaDevice.group+"."+siennaDevice.element,
+                type: 'boolean',
+                role: 'indicator',
+                read: true,
+                write: true
+            },
+            native: {
+                neuronId: siennaDevice.address.toString('hex'),
+                deviceTyp: siennaDevice.typ,
+                group:siennaDevice.group,
+                element:siennaDevice.element
+            }
+        });
 
-		// Set Switch-Typ to native switchTyp value, if defined
-		// caution setObject asyncron => so obj.native could be not valid. Only valid in the second run
-		adapter.log.info("group."+siennaDevice.group+"."+siennaDevice.element + ".switch")
-		adapter.getObject("group."+siennaDevice.group+"."+siennaDevice.element + ".switch",
-				function (err, obj)
-				{
-		            if(obj)
-	                {
-    		            //adapter.log.info(err)
-    		            //adapter.log.info(JSON.stringify(obj.native))
-            			if (err) adapter.log.error('Cannot get object: ' + err)
-            			else if(obj.native.hasOwnProperty("switchTyp"))
-            			{
-            				adapter.log.info('SET_SW_POS to ' + obj.native.switchTyp)
-            				sendMsg(SET_SW_POS , siennaDevice.address, [obj.native.switchTyp, 0x00, 0x00] ); // set
-            			}
-            			else
-            			{
-            				adapter.log.info("switchTyp not defined. Leave actual setting.")
-            			}
-	                }
-				}
-		)
-	}
+        // Set Switch-Typ to native switchTyp value, if defined
+        // caution setObject asyncron => so obj.native could be not valid. Only valid in the second run
+        adapter.log.info("group."+siennaDevice.group+"."+siennaDevice.element + ".switch")
+        adapter.getObject("group."+siennaDevice.group+"."+siennaDevice.element + ".switch",
+                function (err, obj)
+                {
+                    if(obj)
+                    {
+                        //adapter.log.info(err)
+                        //adapter.log.info(JSON.stringify(obj.native))
+                        if (err) adapter.log.error('Cannot get object: ' + err)
+                        else if(obj.native.hasOwnProperty("switchTyp"))
+                        {
+                            adapter.log.info('SET_SW_POS to ' + obj.native.switchTyp)
+                            sendMsg(SET_SW_POS , siennaDevice.address, [obj.native.switchTyp, 0x00, 0x00] ); // set
+                        }
+                        else
+                        {
+                            adapter.log.info("switchTyp not defined. Leave actual setting.")
+                        }
+                    }
+                }
+        )
+    }
 };
 
